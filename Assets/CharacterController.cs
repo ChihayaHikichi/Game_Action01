@@ -6,7 +6,8 @@ using UnityEngine.UI;
 static class Constants
 {
     public const int LockOnAddDegree = 15;
-    public const float DashSpeedMultiple = 2.5f;
+    public const float DashSpeedMultiple = 3.0f;
+    public const int StaminaConsumptionDash = 10;
 }
 
 public class CharacterController : MonoBehaviour {
@@ -24,7 +25,16 @@ public class CharacterController : MonoBehaviour {
 
     private Animator myAnimator;
 
+    private GameObject Timer;
+
     private int i;
+
+
+    // スタミナ
+    public int StaminaPoint;
+    public int Stamina;
+    public int StaminaMax;
+    public int StaminaGain;
 
     // ボタンの長押し判定時間
     int NagaosiTime = 30;
@@ -79,7 +89,17 @@ public class CharacterController : MonoBehaviour {
         //Animatorコンポーネントを取得
         this.myAnimator = GetComponent<Animator>();
 
-        
+        // タイマーのコンポーネントを取得
+        this.Timer = GameObject.Find("Empty_Timer");
+
+
+        // スタミナ
+        StaminaPoint = 40;
+        Stamina = StaminaPoint * 10;
+        StaminaMax = Stamina;
+        StaminaGain = StaminaPoint;
+
+
 
         // ID取得
         CharacterNum += 1;
@@ -129,10 +149,12 @@ public class CharacterController : MonoBehaviour {
             if (this.DashFlag == false && MyInput.GetComponent<MyInput>().DashFlag == true)
             {
                 this.MoveSpeed *= Constants.DashSpeedMultiple;
+                this.myAnimator.SetBool("Dash_Start", true);
             }
             if (this.DashFlag == true && MyInput.GetComponent<MyInput>().DashFlag == false)
             {
                 this.MoveSpeed /= Constants.DashSpeedMultiple;
+                this.myAnimator.SetBool("Dash_Start", false);
             }
             this.DashFlag = MyInput.GetComponent<MyInput>().DashFlag;
 
@@ -161,7 +183,8 @@ public class CharacterController : MonoBehaviour {
                 //WalkFlag = false;
                 //this.myAnimator.SetBool("Walk_F_Start", false);
                 //this.DebugText.GetComponent<Text>().text = "F :" + this.WalkFlag[0] + "\nB :" + this.WalkFlag[1] + "\nR :" + this.WalkFlag[2] + "\nL :" + this.WalkFlag[3];
-                this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
+                //this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
+                this.DebugText.GetComponent<Text>().text = "" + this.DashFlag;
                 //this.myAnimator.SetBool("Dash_Start", true);
             }
 
@@ -185,6 +208,21 @@ public class CharacterController : MonoBehaviour {
 
 
         // 全キャラクターID共通
+
+        // スタミナ自動回復
+        if(this.Timer.GetComponent<Timer>().TimeCountOneSecoundGet() >= 1.0f)
+        {
+            if (this.Stamina < this.StaminaMax)
+            {
+                this.Stamina += this.StaminaGain;
+                if(this.Stamina > this.StaminaMax)
+                {
+                    this.Stamina = this.StaminaMax;
+                }
+            }
+        }
+
+
 
         // キャラクターを指定角度に回転させる
         if (this.SightType == true && this.LockOnFlag == false)
@@ -395,7 +433,10 @@ public class CharacterController : MonoBehaviour {
                     }
                 }
 
-                this.myAnimator.SetBool("Walk_F_Start", true);
+                if (this.DashFlag == false)
+                {
+                    this.myAnimator.SetBool("Walk_F_Start", true);
+                }
                 this.myAnimator.SetBool("Walk_B_Start", false);
                 this.myAnimator.SetBool("Walk_R_Start", false);
                 this.myAnimator.SetBool("Walk_L_Start", false);

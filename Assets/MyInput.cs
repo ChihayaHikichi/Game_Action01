@@ -7,9 +7,9 @@ public class MyInput : MonoBehaviour {
 
     //public bool[] WASD = new bool[8] { false, false, false, false, false, false, false, false };
 
+    private int i;
 
-
-
+    
 
 
     // 前後左右移動入力
@@ -42,6 +42,10 @@ public class MyInput : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+
+        
+
+
 
         // WASD
         if ((Input.GetKey(KeyCode.W) == false && Input.GetKey(KeyCode.S) == true) && (Input.GetKey(KeyCode.A) == false && Input.GetKey(KeyCode.D) == true))
@@ -104,6 +108,9 @@ public class MyInput : MonoBehaviour {
                 if (this.LockOnFlag == false)
                 {
                     this.LockOnFlag = true;
+
+                    // ダッシュを止める
+                    DashFlag = false;
                 }
                 else
                 {
@@ -122,6 +129,9 @@ public class MyInput : MonoBehaviour {
                 if (this.SightType == false)
                 {
                     this.SightType = true;
+
+                    // ダッシュを止める
+                    DashFlag = false;
                 }
                 else
                 {
@@ -156,35 +166,106 @@ public class MyInput : MonoBehaviour {
             this.VRotation = -60;
         }
 
-        // ダッシュ判定
-        if (DashTime[0] < NagaosiTime && Input.GetKeyDown(KeyCode.W) == true)
+        // ステップ開始
+        if (Input.GetKeyDown(KeyCode.LeftShift) == true && this.WASD > 0)
         {
-            // ダッシュ処理へ
+
+        }
+
+
+
+
+
+
+
+
+        // ダッシュ判定 ----------------------------------------------------------------------------------------------------------- //
+        // ダッシュ処理へ
+        if ((DashTime[0] > 0 && DashTime[0] < NagaosiTime) && Input.GetKeyDown(KeyCode.W) == true)
+        {
             DashTime[0] = 0;
-            
-            DashFlag = true;
+
+            if (SightType == false && LockOnFlag == false)
+            {
+                DashFlag = true;
+            }
             
         }
+        if ((DashTime[1] > 0 && DashTime[1] < NagaosiTime) && Input.GetKeyDown(KeyCode.S) == true)
+        {
+            DashTime[1] = 0;
+
+            if (SightType == false && LockOnFlag == false)
+            {
+                DashFlag = true;
+            }
+
+        }
+        if ((DashTime[2] > 0 && DashTime[2] < NagaosiTime) && Input.GetKeyDown(KeyCode.D) == true)
+        {
+            DashTime[2] = 0;
+
+            if (SightType == false && LockOnFlag == false)
+            {
+                DashFlag = true;
+            }
+
+        }
+        if ((DashTime[3] > 0 && DashTime[3] < NagaosiTime) && Input.GetKeyDown(KeyCode.A) == true)
+        {
+            DashTime[3] = 0;
+
+            if (SightType == false && LockOnFlag == false)
+            {
+                DashFlag = true;
+            }
+
+        }
+
+        for (i = 0; i < 4; i++)
+        {
+            // 受付時間計算
+            if (DashTime[i] > 0)
+            {
+                DashTime[i]++;
+            }
+
+            // ダッシュ判定受付終了
+            if (DashTime[i] >= NagaosiTime)
+            {
+                DashTime[i] = 0;
+            }
+        }
+
+        // ダッシュ判定受付開始
         if (Input.GetKeyDown(KeyCode.W) == true && this.DashFlag == false)
         {
-            // ダッシュ判定受付開始
             DashTime[0]++;
         }
-        if (DashTime[0] >= NagaosiTime)
+        if (Input.GetKeyDown(KeyCode.S) == true && this.DashFlag == false)
         {
-            // ダッシュ判定受付終了
-            DashTime[0] = 0;
+            DashTime[1]++;
         }
-        if(DashFlag == true)
+        if (Input.GetKeyDown(KeyCode.D) == true && this.DashFlag == false)
+        {
+            DashTime[2]++;
+        }
+        if (Input.GetKeyDown(KeyCode.A) == true && this.DashFlag == false)
+        {
+            DashTime[3]++;
+        }
+
+        // ダッシュの終了
+        if (DashFlag == true)
         {
             if(this.WASD == 0)
             {
                 DashFlag = false;
             }
         }
+        // ------------------------------------------------------------------------------------------------------------------------ //
+
         
-
-
 
     }
 }
