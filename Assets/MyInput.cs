@@ -161,7 +161,9 @@ public class MyInput : MonoBehaviour {
         {
             // ダッシュ処理へ
             DashTime[0] = 0;
+            
             DashFlag = true;
+            
         }
         if (Input.GetKeyDown(KeyCode.W) == true && this.DashFlag == false)
         {

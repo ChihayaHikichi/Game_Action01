@@ -6,13 +6,14 @@ using UnityEngine.UI;
 static class Constants
 {
     public const int LockOnAddDegree = 15;
-    public const float DashSpeedMultiple = 1.5f;
+    public const float DashSpeedMultiple = 2.5f;
 }
 
 public class CharacterController : MonoBehaviour {
 
     // デバッグ用テキスト表示
     private GameObject DebugText;
+    private int debugint = 0;
 
     // ロックオン対象
     private GameObject LockOnTarget;
@@ -127,7 +128,11 @@ public class CharacterController : MonoBehaviour {
             // ダッシュフラグの切り替わり
             if (this.DashFlag == false && MyInput.GetComponent<MyInput>().DashFlag == true)
             {
-                
+                this.MoveSpeed *= Constants.DashSpeedMultiple;
+            }
+            if (this.DashFlag == true && MyInput.GetComponent<MyInput>().DashFlag == false)
+            {
+                this.MoveSpeed /= Constants.DashSpeedMultiple;
             }
             this.DashFlag = MyInput.GetComponent<MyInput>().DashFlag;
 
@@ -156,12 +161,21 @@ public class CharacterController : MonoBehaviour {
                 //WalkFlag = false;
                 //this.myAnimator.SetBool("Walk_F_Start", false);
                 //this.DebugText.GetComponent<Text>().text = "F :" + this.WalkFlag[0] + "\nB :" + this.WalkFlag[1] + "\nR :" + this.WalkFlag[2] + "\nL :" + this.WalkFlag[3];
-
+                this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
                 //this.myAnimator.SetBool("Dash_Start", true);
             }
 
         }
 
+        if(this.ID == 2)
+        {
+            debugint++;
+            if (debugint > 30)
+            {
+                this.WASD = Random.Range(1, 9);
+                debugint = 0;
+            }
+        }
 
 
 
@@ -355,9 +369,11 @@ public class CharacterController : MonoBehaviour {
 
 
         // デバッグ
-        //this.DebugText.GetComponent<Text>().text = "" + this.WalkFlag[0];
-
-
+        if (this.ID == 1)
+        {
+            //this.DebugText.GetComponent<Text>().text = "" + this.WalkFlag[0];
+            
+        }
     }
 
     private void WalkFlagManager(int Direction)
