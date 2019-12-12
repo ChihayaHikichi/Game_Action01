@@ -35,6 +35,9 @@ public class MyInput : MonoBehaviour {
     private int[] DashTime = new int[4] { 0, 0, 0, 0 };
     public bool DashFlag = false;
 
+    // ステップ判定
+    public bool StepFlag = false;
+
     // Use this for initialization
     void Start () {
 		
@@ -167,11 +170,15 @@ public class MyInput : MonoBehaviour {
         }
 
         // ステップ開始
+        if (this.StepFlag == true)
+        {
+            this.StepFlag = false;
+        }
         if (Input.GetKeyDown(KeyCode.LeftShift) == true && this.WASD > 0)
         {
-
+            this.StepFlag = true;
         }
-
+        
 
 
 

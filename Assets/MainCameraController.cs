@@ -52,7 +52,7 @@ public class MainCameraController : MonoBehaviour {
         //Debug.Log(MainCharacter.transform.localEulerAngles.y);
 
 
-
+        
 
 
     }

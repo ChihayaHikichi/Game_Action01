@@ -7,7 +7,10 @@ static class Constants
 {
     public const int LockOnAddDegree = 15;
     public const float DashSpeedMultiple = 3.0f;
-    public const int StaminaConsumptionDash = 10;
+    public const float StepSpeedMultiple = 5.0f;
+    public const float StepTime = 1.0f;//0.25
+    public const int StaminaConsumptionDash = 4;
+    public const int StaminaConsumptionStep = 80;
 }
 
 public class CharacterController : MonoBehaviour {
@@ -27,14 +30,32 @@ public class CharacterController : MonoBehaviour {
 
     private GameObject Timer;
 
+    // UI描画
+    private GameObject UIController;
+
     private int i;
 
+    // HP
+    public int HPPoint;
+    public int HP;
+    public int HPMax;
+    public int HP_Old;
+
+    // SP
+    public int SPPoint;
+    public int SP;
+    public int SPMax;
+    public int SPGain;
+    public int SP_Old;
 
     // スタミナ
     public int StaminaPoint;
     public int Stamina;
     public int StaminaMax;
     public int StaminaGain;
+    public int Stamina_Old;
+
+    public bool StaminaShortageFlag = false;
 
     // ボタンの長押し判定時間
     int NagaosiTime = 30;
@@ -58,10 +79,17 @@ public class CharacterController : MonoBehaviour {
 
     // 移動速度
     private float MoveSpeed;
+    private float DashMultiple = 1;
     
 
     // ダッシュフラグ
     private bool DashFlag = false;
+    private bool DashFlag_Old = false;
+
+    // ステップフラグ
+    private bool StepFlag = false;
+    private Vector3 StepDirection;
+    private float StepCount = 0;
 
     // 向き
     public float HRotation;
@@ -92,13 +120,29 @@ public class CharacterController : MonoBehaviour {
         // タイマーのコンポーネントを取得
         this.Timer = GameObject.Find("Empty_Timer");
 
+        // UI描画のコンポーネントを取得
+        this.UIController = GameObject.Find("Empty_UIController");
+
+        // HP
+        this.HPPoint = 40;
+        this.HP = this.HPPoint * 10;
+        this.HPMax = this.HP;
+        this.HP_Old = this.HP;
+
+
+        // SP
+        this.SPPoint = 40;
+        this.SP = this.SPPoint * 10;
+        this.SPMax = this.SP;
+        this.SPGain = this.SPPoint;
+        this.SP_Old = this.SP;
 
         // スタミナ
-        StaminaPoint = 40;
-        Stamina = StaminaPoint * 10;
-        StaminaMax = Stamina;
-        StaminaGain = StaminaPoint;
-
+        this.StaminaPoint = 40;
+        this.Stamina = this.StaminaPoint * 10;
+        this.StaminaMax = this.Stamina;
+        this.StaminaGain = this.StaminaPoint;
+        this.Stamina_Old = this.Stamina;
 
 
         // ID取得
@@ -116,7 +160,7 @@ public class CharacterController : MonoBehaviour {
 
 
         // 移動速度
-        MoveSpeed = 200.0f;
+        MoveSpeed = 12000.0f;
 
         // 向き初期化
         HRotation = this.transform.localEulerAngles.y;
@@ -145,19 +189,11 @@ public class CharacterController : MonoBehaviour {
             this.SightType = MyInput.GetComponent<MyInput>().SightType;
 
             // ダッシュフラグを取得
-            // ダッシュフラグの切り替わり
-            if (this.DashFlag == false && MyInput.GetComponent<MyInput>().DashFlag == true)
-            {
-                this.MoveSpeed *= Constants.DashSpeedMultiple;
-                this.myAnimator.SetBool("Dash_Start", true);
-            }
-            if (this.DashFlag == true && MyInput.GetComponent<MyInput>().DashFlag == false)
-            {
-                this.MoveSpeed /= Constants.DashSpeedMultiple;
-                this.myAnimator.SetBool("Dash_Start", false);
-            }
+            
             this.DashFlag = MyInput.GetComponent<MyInput>().DashFlag;
 
+            // ステップフラグを取得
+            this.StepFlag = MyInput.GetComponent<MyInput>().StepFlag;
 
 
 
@@ -184,8 +220,15 @@ public class CharacterController : MonoBehaviour {
                 //this.myAnimator.SetBool("Walk_F_Start", false);
                 //this.DebugText.GetComponent<Text>().text = "F :" + this.WalkFlag[0] + "\nB :" + this.WalkFlag[1] + "\nR :" + this.WalkFlag[2] + "\nL :" + this.WalkFlag[3];
                 //this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
-                this.DebugText.GetComponent<Text>().text = "" + this.DashFlag;
+                this.DebugText.GetComponent<Text>().text = "" + this.StepCount;
                 //this.myAnimator.SetBool("Dash_Start", true);
+
+
+
+            }
+            if (Input.GetKeyDown(KeyCode.P) == true)
+            {
+                //this.myRigidbody.AddForce(this.transform.forward * 100, ForceMode.Impulse);
             }
 
         }
@@ -195,9 +238,10 @@ public class CharacterController : MonoBehaviour {
             debugint++;
             if (debugint > 30)
             {
-                this.WASD = Random.Range(1, 9);
+                //this.WASD = Random.Range(1, 9);
                 debugint = 0;
             }
+            
         }
 
 
@@ -209,8 +253,11 @@ public class CharacterController : MonoBehaviour {
 
         // 全キャラクターID共通
 
+
+        
+
         // スタミナ自動回復
-        if(this.Timer.GetComponent<Timer>().TimeCountOneSecoundGet() >= 1.0f)
+        if (this.Timer.GetComponent<Timer>().TimeCountOneSecoundGet() >= 1.0f)
         {
             if (this.Stamina < this.StaminaMax)
             {
@@ -222,12 +269,68 @@ public class CharacterController : MonoBehaviour {
             }
         }
 
+        // ダッシュでスタミナ消費
+        if (this.DashFlag == true)
+        {
+
+            if (this.Stamina >= Constants.StaminaConsumptionDash)
+            {
+                if (this.Timer.GetComponent<Timer>().TimeCountZeroPOneSecoundGet() >= 0.1f)
+                {
+                    this.Stamina -= Constants.StaminaConsumptionDash;
+                }
+            }
+            else
+            {
+                this.DashFlag = false;
+            }
+        }
+
+        // ダッシュフラグ
+        // ダッシュフラグの切り替わり
+        if (this.DashFlag_Old == false && this.DashFlag == true)
+        {
+            //this.MoveSpeed *= Constants.DashSpeedMultiple;
+            this.DashMultiple = Constants.DashSpeedMultiple;
+            this.myAnimator.SetBool("Dash_Start", true);
+        }
+        if (this.DashFlag_Old == true && this.DashFlag == false)
+        {
+            //this.MoveSpeed /= Constants.DashSpeedMultiple;
+            this.DashMultiple = 1;
+            this.myAnimator.SetBool("Dash_Start", false);
+        }
+
+        // ステップフラグ
+        if (this.StepCount >= Constants.StepTime)
+        {
+            this.StepCount = 0;
+        }
+        if (this.StepCount > 0)
+        {
+            this.StepCount += this.Timer.GetComponent<Timer>().OneFlameTimeReturn();
+        }
+        if (this.StepFlag == true && this.StepCount == 0)
+        {
+            if (this.Stamina >= Constants.StaminaConsumptionStep)
+            {
+                // ステップ開始
+                this.StepCount += this.Timer.GetComponent<Timer>().OneFlameTimeReturn();
+                // スタミナ消費
+                this.Stamina -= Constants.StaminaConsumptionStep;
+                // 方向取得
+                //this.StepDirection = this.transform.rotation;
+            }
+        }
 
 
         // キャラクターを指定角度に回転させる
         if (this.SightType == true && this.LockOnFlag == false)
         {
-            this.transform.rotation = Quaternion.Euler(0, HRotation, 0);
+            if (this.StepCount == 0)
+            {
+                this.transform.rotation = Quaternion.Euler(0, HRotation, 0);
+            }
         }
 
         // ロックオン対象を取得
@@ -237,10 +340,23 @@ public class CharacterController : MonoBehaviour {
         // キャラクターをロックオン方向に向かす
         if (this.LockOnFlag == true)
         {
-            this.transform.LookAt(LockOnTarget.transform.position);
+            if (this.StepCount == 0)
+            {
+                this.transform.LookAt(LockOnTarget.transform.position);
+
+                
+            }
             // H・VRotateを同期させる
-            this.HRotation = this.transform.localEulerAngles.y;
-            this.VRotation = this.transform.localEulerAngles.x + Constants.LockOnAddDegree; 
+            this.VRotation = this.transform.localEulerAngles.x + Constants.LockOnAddDegree;
+            if (this.StepCount == 0)
+            {
+                this.HRotation = this.transform.localEulerAngles.y;
+            }
+            else
+            {
+                //Vector2(LockOnTarget.transform.position.x, LockOnTarget.transform.position.z)- Vector2(this.transform.position.x, this.transform.position.z)
+                this.HRotation = 90-Mathf.Atan2(LockOnTarget.transform.position.z - this.transform.position.z, LockOnTarget.transform.position.x - this.transform.position.x) / Mathf.PI * 180;
+            }
             //Debug.Log(this.transform.localEulerAngles.x);
         }
 
@@ -253,7 +369,7 @@ public class CharacterController : MonoBehaviour {
             {
                 case 1:
                     // 前
-                    this.myRigidbody.AddForce(this.transform.forward * MoveSpeed);
+                    this.myRigidbody.AddForce(this.transform.forward * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                     // アニメーション
                     if (this.WalkFlag[0] == false)
@@ -263,7 +379,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 2:
                     // 後ろ
-                    this.myRigidbody.AddForce(this.transform.forward * (-1) * MoveSpeed * 0.4f);
+                    this.myRigidbody.AddForce(this.transform.forward * (-1) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
 
                     // アニメーション
                     if (this.WalkFlag[1] == false)
@@ -273,7 +389,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 3:
                     // 右
-                    this.myRigidbody.AddForce(this.transform.right * MoveSpeed);
+                    this.myRigidbody.AddForce(this.transform.right * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                     // アニメーション
                     if (this.WalkFlag[2] == false)
@@ -283,7 +399,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 4:
                     // 左
-                    this.myRigidbody.AddForce(this.transform.right * (-1) * MoveSpeed);
+                    this.myRigidbody.AddForce(this.transform.right * (-1) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                     // アニメーション
                     if (this.WalkFlag[3] == false)
@@ -293,7 +409,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 5:
                     // 右前
-                    this.myRigidbody.AddForce((this.transform.right + this.transform.forward) * MoveSpeed);
+                    this.myRigidbody.AddForce((this.transform.right + this.transform.forward) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                     // アニメーション
                     if (this.WalkFlag[4] == false)
@@ -303,7 +419,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 6:
                     // 左前
-                    this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * 1) * MoveSpeed);
+                    this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * 1) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                     // アニメーション
                     if (this.WalkFlag[5] == false)
@@ -313,7 +429,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 7:
                     // 右後ろ
-                    this.myRigidbody.AddForce((this.transform.right + this.transform.forward * (-1)) * MoveSpeed * 0.4f);
+                    this.myRigidbody.AddForce((this.transform.right + this.transform.forward * (-1)) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
 
                     // アニメーション
                     if (this.WalkFlag[6] == false)
@@ -323,7 +439,7 @@ public class CharacterController : MonoBehaviour {
                     break;
                 case 8:
                     // 左後ろ
-                    this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * (-1)) * MoveSpeed * 0.4f);
+                    this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * (-1)) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
 
                     // アニメーション
                     if (this.WalkFlag[7] == false)
@@ -373,7 +489,7 @@ public class CharacterController : MonoBehaviour {
 
             if (this.WASD > 0)
             {
-                this.myRigidbody.AddForce(this.transform.forward * MoveSpeed);
+                this.myRigidbody.AddForce(this.transform.forward * this.MoveSpeed * this.DashMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                 // アニメーション
                 if (this.WalkFlag[0] == false)
@@ -393,13 +509,19 @@ public class CharacterController : MonoBehaviour {
 
 
 
+        if (this.ID == 1)
+        {
+            this.UIController.GetComponent<UIController>().DrawUI();
+
+            
+        }
 
 
-
-
-
-
-
+        // 1フレーム前の情報を更新
+        this.DashFlag_Old = this.DashFlag;
+        this.HP_Old = this.HP;
+        this.SP_Old = this.SP;
+        this.Stamina_Old = this.Stamina;
 
 
 

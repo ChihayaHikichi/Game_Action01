@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Timer : MonoBehaviour {
 
-    public float OneFlameTime = 0;
+    private float OneFlameTime = 0;
     private float TimeCountOneSecound = 0;
     private float TimeCountZeroPOneSecound = 0;
 
@@ -28,6 +28,10 @@ public class Timer : MonoBehaviour {
 
     }
 
+    public float OneFlameTimeReturn()
+    {
+        return OneFlameTime;
+    }
 
     public float TimeCountOneSecoundGet()
     {
