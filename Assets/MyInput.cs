@@ -9,8 +9,10 @@ public class MyInput : MonoBehaviour {
 
     private int i;
 
-    
 
+    // 左クリック
+    public bool MouseL = false;
+    public bool MouseLDown = false;
 
     // 前後左右移動入力
     public int WASD = 0;
@@ -46,7 +48,34 @@ public class MyInput : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
-        
+
+        // 左クリック
+        if (Input.GetMouseButton(0) == true)
+        {
+            if (this.MouseL == false)
+            {
+                this.MouseL = true;
+            }
+        }
+        else
+        {
+            if (this.MouseL == true)
+            {
+                this.MouseL = false;
+            }
+        }
+        if (Input.GetMouseButtonDown(0) == true)
+        {
+            this.MouseLDown = true;
+        }
+        else
+        {
+            if (this.MouseLDown == true)
+            {
+                this.MouseLDown = false;
+            }
+        }
+
 
 
 

@@ -6,11 +6,13 @@ using UnityEngine.UI;
 static class Constants
 {
     public const int LockOnAddDegree = 15;
-    public const float DashSpeedMultiple = 3.0f;
-    public const float StepSpeedMultiple = 5.0f;
+    public const float DashSpeedMultiple = 2.0f;
+    public const float StepSpeedMultiple = 3.5f;
     public const float StepTime = 0.2f;//0.2
-    public const int StaminaConsumptionDash = 4;
+    public const float StepRigorTime = 0.2f;
+    public const int StaminaConsumptionDash = 3;
     public const int StaminaConsumptionStep = 80;
+    public const int StaminaGain = 1;
 }
 
 public class CharacterController : MonoBehaviour {
@@ -70,6 +72,13 @@ public class CharacterController : MonoBehaviour {
 
     // チーム分け
     public int TeamID;
+
+    // 左クリック
+    private bool MouseL = false;
+    private bool MouseLDown = false;
+
+    // コンボ
+    private int Combo1 = 0;
 
     // 歩いているフラグ（F,B,R,L,FR,FL,BR,BL）
     private bool[] WalkFlag = new bool[8] { false, false, false, false, false, false, false, false };
@@ -141,7 +150,7 @@ public class CharacterController : MonoBehaviour {
         this.StaminaPoint = 40;
         this.Stamina = this.StaminaPoint * 10;
         this.StaminaMax = this.Stamina;
-        this.StaminaGain = this.StaminaPoint;
+        this.StaminaGain = this.StaminaPoint * Constants.StaminaGain;
         this.Stamina_Old = this.Stamina;
 
 
@@ -182,6 +191,10 @@ public class CharacterController : MonoBehaviour {
         // 自分の操作を代入
         if (this.ID == 1) 
         {
+            // 左クリックを取得
+            this.MouseL = MyInput.GetComponent<MyInput>().MouseL;
+            this.MouseLDown = MyInput.GetComponent<MyInput>().MouseLDown;
+
             // WASDキーの入力を取得
             this.WASD = MyInput.GetComponent<MyInput>().WASD;
 
@@ -212,24 +225,7 @@ public class CharacterController : MonoBehaviour {
             this.VRotation = MyInput.GetComponent<MyInput>().VRotation;
 
 
-            // デバッグ
-            if (Input.GetKey(KeyCode.Q) == true)
-            {
-                //Debug.Log("OK");
-                //WalkFlag = false;
-                //this.myAnimator.SetBool("Walk_F_Start", false);
-                //this.DebugText.GetComponent<Text>().text = "F :" + this.WalkFlag[0] + "\nB :" + this.WalkFlag[1] + "\nR :" + this.WalkFlag[2] + "\nL :" + this.WalkFlag[3];
-                //this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
-                this.DebugText.GetComponent<Text>().text = "" + this.WASD;
-                //this.myAnimator.SetBool("Dash_Start", true);
-
-
-
-            }
-            if (Input.GetKeyDown(KeyCode.P) == true)
-            {
-                //this.myRigidbody.AddForce(this.transform.forward * 100, ForceMode.Impulse);
-            }
+            
 
         }
 
@@ -286,6 +282,7 @@ public class CharacterController : MonoBehaviour {
             else
             {
                 this.DashFlag = false;
+                //this.myAnimator.SetBool("Dash_Start", false);
             }
         }
 
@@ -296,18 +293,35 @@ public class CharacterController : MonoBehaviour {
             //this.MoveSpeed *= Constants.DashSpeedMultiple;
             this.DashMultiple = Constants.DashSpeedMultiple;
             this.myAnimator.SetBool("Dash_Start", true);
+
+            if (WalkFlag[0] == true)
+            {
+                this.WalkFlagManager(-1);
+            }
         }
         if (this.DashFlag_Old == true && this.DashFlag == false)
         {
             //this.MoveSpeed /= Constants.DashSpeedMultiple;
             this.DashMultiple = 1;
             this.myAnimator.SetBool("Dash_Start", false);
+
+            if (this.WASD > 0)
+            {
+                this.myAnimator.SetBool("Walk_F_Start", true);
+                //Debug.Log("OK");
+            }
         }
+        
 
         // ステップフラグ
-        if (this.StepCount >= Constants.StepTime)
+        if (this.StepCount >= Constants.StepTime + Constants.StepRigorTime)
         {
             this.StepCount = 0;
+
+            if (this.DashFlag == true)
+            {
+                this.myAnimator.SetBool("Dash_Start", true);
+            }
 
             //WalkFlagManager(0);
         }
@@ -327,6 +341,7 @@ public class CharacterController : MonoBehaviour {
                 this.StepWASD = this.WASD;
 
                 WalkFlagManager(-1);
+                this.myAnimator.SetBool("Dash_Start", false);
             }
         }
 
@@ -347,12 +362,10 @@ public class CharacterController : MonoBehaviour {
         // キャラクターをロックオン方向に向かす
         if (this.LockOnFlag == true)
         {
-            if (this.StepCount == 0)
-            {
-                this.transform.LookAt(LockOnTarget.transform.position);
+            
+ 
+            this.transform.LookAt(LockOnTarget.transform.position);
 
-                
-            }
             // H・VRotateを同期させる
             this.VRotation = this.transform.localEulerAngles.x + Constants.LockOnAddDegree;
             if (this.StepCount == 0)
@@ -363,11 +376,34 @@ public class CharacterController : MonoBehaviour {
             {
                 //Vector2(LockOnTarget.transform.position.x, LockOnTarget.transform.position.z)- Vector2(this.transform.position.x, this.transform.position.z)
                 this.HRotation = 90-Mathf.Atan2(LockOnTarget.transform.position.z - this.transform.position.z, LockOnTarget.transform.position.x - this.transform.position.x) / Mathf.PI * 180;
+
+
+                //this.HRotation = this.transform.localEulerAngles.y;
             }
             //Debug.Log(this.transform.localEulerAngles.x);
         }
 
 
+
+        // 弱攻撃
+        if (this.MouseLDown == true && this.Combo1 == 0)
+        {
+            this.myAnimator.SetBool("Attack1_Start", true);
+            this.Combo1 = 1;
+        }
+        else
+        {
+            this.myAnimator.SetBool("Attack1_Start", false);
+        }
+        if (this.MouseLDown == true && this.Combo1 == 1)
+        {
+            this.myAnimator.SetBool("Attack2_Start", true);
+            this.Combo1 = 0;
+        }
+        else
+        {
+            this.myAnimator.SetBool("Attack2_Start", false);
+        }
 
 
 
@@ -422,7 +458,7 @@ public class CharacterController : MonoBehaviour {
                         break;
                     case 5:
                         // 右前
-                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
+                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward) / Mathf.Sqrt(2) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
                         if (this.WalkFlag[4] == false)
@@ -432,7 +468,7 @@ public class CharacterController : MonoBehaviour {
                         break;
                     case 6:
                         // 左前
-                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * 1) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
+                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * 1) / Mathf.Sqrt(2) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
                         if (this.WalkFlag[5] == false)
@@ -442,7 +478,7 @@ public class CharacterController : MonoBehaviour {
                         break;
                     case 7:
                         // 右後ろ
-                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward * (-1)) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
+                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward * (-1)) / Mathf.Sqrt(2) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
 
                         // アニメーション
                         if (this.WalkFlag[6] == false)
@@ -452,7 +488,7 @@ public class CharacterController : MonoBehaviour {
                         break;
                     case 8:
                         // 左後ろ
-                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * (-1)) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
+                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * (-1)) / Mathf.Sqrt(2) * MoveSpeed * this.Timer.GetComponent<Timer>().OneFlameTimeReturn() * 0.4f);
 
                         // アニメーション
                         if (this.WalkFlag[7] == false)
@@ -510,11 +546,13 @@ public class CharacterController : MonoBehaviour {
                         //WalkFlag[0] = true;
                         WalkFlagManager(0);
                         //WalkFlag[0] = true;
+                        //Debug.Log("OK");
+                        
                     }
                 }
             }
         }
-        else
+        else if (this.StepCount <= Constants.StepTime)
         {
             // ステップ
             if (this.SightType == true || this.LockOnFlag == true)
@@ -546,42 +584,60 @@ public class CharacterController : MonoBehaviour {
                         this.myRigidbody.AddForce(this.transform.right * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
-                        this.myAnimator.SetTrigger("Step_R_Start");
+                        if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                        {
+                            this.myAnimator.SetTrigger("Step_R_Start");
+                        }
                         break;
                     case 4:
                         // 左
                         this.myRigidbody.AddForce(this.transform.right * (-1) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
-                        this.myAnimator.SetTrigger("Step_L_Start");
+                        if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                        {
+                            this.myAnimator.SetTrigger("Step_L_Start");
+                        }
                         break;
                     case 5:
                         // 右前
-                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
+                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward) / Mathf.Sqrt(2) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
-                        this.myAnimator.SetTrigger("Step_FR_Start");
+                        if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                        {
+                            this.myAnimator.SetTrigger("Step_FR_Start");
+                        }
                         break;
                     case 6:
                         // 左前
-                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * 1) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
+                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * 1) / Mathf.Sqrt(2) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
-                        this.myAnimator.SetTrigger("Step_FL_Start");
+                        if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                        {
+                            this.myAnimator.SetTrigger("Step_FL_Start");
+                        }
                         break;
                     case 7:
                         // 右後ろ
-                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward * (-1)) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
+                        this.myRigidbody.AddForce((this.transform.right + this.transform.forward * (-1)) / Mathf.Sqrt(2) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
-                        this.myAnimator.SetTrigger("Step_BR_Start");
+                        if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                        {
+                            this.myAnimator.SetTrigger("Step_BR_Start");
+                        }
                         break;
                     case 8:
                         // 左後ろ
-                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * (-1)) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
+                        this.myRigidbody.AddForce((this.transform.right * (-1) + this.transform.forward * (-1)) / Mathf.Sqrt(2) * MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                         // アニメーション
-                        this.myAnimator.SetTrigger("Step_BL_Start");
+                        if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                        {
+                            this.myAnimator.SetTrigger("Step_BL_Start");
+                        }
                         break;
                 }
             }
@@ -590,7 +646,12 @@ public class CharacterController : MonoBehaviour {
                 this.myRigidbody.AddForce(this.transform.forward * this.MoveSpeed * Constants.StepSpeedMultiple * this.Timer.GetComponent<Timer>().OneFlameTimeReturn());
 
                 // アニメーション
-                this.myAnimator.SetTrigger("Step_F_Start");
+                if (this.StepCount == this.Timer.GetComponent<Timer>().OneFlameTimeReturn())
+                {
+                    this.myAnimator.SetTrigger("Step_F_Start");
+                    
+                }
+                
             }
         }
 
@@ -599,10 +660,7 @@ public class CharacterController : MonoBehaviour {
         {
             WalkFlagManager(-1);
 
-            if (this.ID==1)
-            {
-                Debug.Log("OK");
-            }
+            
         }
 
 
@@ -630,7 +688,26 @@ public class CharacterController : MonoBehaviour {
         if (this.ID == 1)
         {
             //this.DebugText.GetComponent<Text>().text = "" + this.WalkFlag[0];
-            
+            //this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
+            // デバッグ
+            if (Input.GetKey(KeyCode.Q) == true)
+            {
+                //Debug.Log("OK");
+                //WalkFlag = false;
+                //this.myAnimator.SetBool("Walk_F_Start", false);
+                this.DebugText.GetComponent<Text>().text = "F :" + this.WalkFlag[0] + "\nB :" + this.WalkFlag[1] + "\nR :" + this.WalkFlag[2] + "\nL :" + this.WalkFlag[3];
+                //this.DebugText.GetComponent<Text>().text = "" + myRigidbody.velocity.magnitude;
+                //this.DebugText.GetComponent<Text>().text = "" + this.WalkFlag[0];
+                //this.myAnimator.SetBool("Dash_Start", true);
+
+                //this.Stamina = this.StaminaMax;
+
+            }
+            if (Input.GetKeyDown(KeyCode.P) == true)
+            {
+                //this.myRigidbody.AddForce(this.transform.forward * 100, ForceMode.Impulse);
+            }
+
         }
     }
 
@@ -645,14 +722,18 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
+                        //Debug.Log("OK" + i);
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
+                        //Debug.Log(i +""+""+ this.WalkFlag[Direction]);
+                        //Debug.Log("OK" + i);
+
                     }
                 }
-
+                
                 if (this.DashFlag == false)
                 {
                     this.myAnimator.SetBool("Walk_F_Start", true);
@@ -664,20 +745,22 @@ public class CharacterController : MonoBehaviour {
                 this.myAnimator.SetBool("Walk_FL_Start", false);
                 this.myAnimator.SetBool("Walk_BR_Start", false);
                 this.myAnimator.SetBool("Walk_BL_Start", false);
+
+                
                 break;
             case 1:
                 for (i = 0; i < 8; i++)
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
-
+                
                 this.myAnimator.SetBool("Walk_F_Start", false);
                 this.myAnimator.SetBool("Walk_B_Start", true);
                 this.myAnimator.SetBool("Walk_R_Start", false);
@@ -692,11 +775,11 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
 
@@ -714,11 +797,11 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
 
@@ -736,11 +819,11 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
 
@@ -758,11 +841,11 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
 
@@ -780,11 +863,11 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
 
@@ -802,11 +885,11 @@ public class CharacterController : MonoBehaviour {
                 {
                     if (Direction == i)
                     {
-                        this.WalkFlag[Direction] = true;
+                        this.WalkFlag[i] = true;
                     }
                     else
                     {
-                        this.WalkFlag[Direction] = false;
+                        this.WalkFlag[i] = false;
                     }
                 }
 
@@ -824,7 +907,7 @@ public class CharacterController : MonoBehaviour {
                 {
                     this.WalkFlag[i] = false;
                 }
-
+                
                 this.myAnimator.SetBool("Walk_F_Start", false);
                 this.myAnimator.SetBool("Walk_B_Start", false);
                 this.myAnimator.SetBool("Walk_R_Start", false);

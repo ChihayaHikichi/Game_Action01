@@ -5062,6 +5062,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 287a2091aa7bca3498bd5f2c6d9bf5d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  HPPoint: 0
+  HP: 0
+  HPMax: 0
+  HP_Old: 0
+  SPPoint: 0
+  SP: 0
+  SPMax: 0
+  SPGain: 0
+  SP_Old: 0
+  StaminaPoint: 0
+  Stamina: 0
+  StaminaMax: 0
+  StaminaGain: 0
+  Stamina_Old: 0
+  StaminaShortageFlag: 0
+  TeamID: 0
   HRotation: 0
   VRotation: 0
   SightType: 1
