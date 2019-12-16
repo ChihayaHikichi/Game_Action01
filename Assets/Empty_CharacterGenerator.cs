@@ -15,7 +15,7 @@ public class Empty_CharacterGenerator : MonoBehaviour {
         Character1.name = "Character1";
         Character1.GetComponent<CharacterController>().TeamID = 0;
 
-        GameObject Character2 = Instantiate(CharacterPrehab, new Vector3(0, 3, 2), new Quaternion(0, 0, 0, 0)) as GameObject;
+        GameObject Character2 = Instantiate(CharacterPrehab, new Vector3(0, 0, 2), new Quaternion(0, 180, 0, 0)) as GameObject;
         Character2.name = "Character2";
         Character2.GetComponent<CharacterController>().TeamID = 1;
     }
